@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  getAssignmentMarks,
+  getMarkBySubmission,
   overrideMark,
   publishMark
 } from '../utils/services';
@@ -30,18 +30,22 @@ const EvaluationView: React.FC = () => {
     const fetchData = async () => {
       if (!id) return;
       try {
-        const res = await getAssignmentMarks(0);
-        const currentMark = res.data.find(m => m.submission_id === Number(id));
+        const res = await getMarkBySubmission(Number(id));
+        const currentMark = res.data;
 
         if (currentMark) {
           setMark(currentMark);
           setScore(currentMark.final_score);
           setIsPublished(currentMark.is_published);
-        } else {
-          setError('Evaluation results not found yet. It may still be processing.');
         }
-      } catch (err) {
-        setError('Failed to fetch marks');
+      } catch (err: any) {
+        if (err.response?.status === 404) {
+          setError('Evaluation results not found yet. It may still be processing.');
+        } else if (err.response?.status === 403) {
+          setError('Mark not yet published or you are not authorized.');
+        } else {
+          setError('Failed to fetch marks');
+        }
       } finally {
         setLoading(false);
       }

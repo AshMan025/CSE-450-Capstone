@@ -66,6 +66,22 @@ async def process_evaluation_job(job_id: int, db: Session, req: schemas.Evaluati
         job.llm_model_used = model_used
         job.parsed_result = parsed_result
         job.status = "completed"
+        
+        # 3. Push to Marks Service
+        marks_service_url = os.environ.get("MARKS_SERVICE_URL", "http://marks-service:8006")
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.post(f"{marks_service_url}/", json={
+                    "assignment_id": req.assignment_id,
+                    "submission_id": req.submission_id,
+                    "student_id": req.student_id,
+                    "base_result": parsed_result,
+                    "final_score": parsed_result.get("total_score", 0)
+                })
+        except Exception as push_err:
+            logger.error(f"Failed to push mark to marks-service: {push_err}")
+            # We don't fail the whole job if push fails, but it's an issue
+
     except Exception as e:
         job.status = "failed"
         job.error_message = str(e)

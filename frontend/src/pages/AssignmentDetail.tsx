@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
+  getAssignment,
   getAssignmentSubmissions,
+  getMySubmission,
   uploadFile,
   submitAssignment,
   startEvaluation
 } from '../utils/services';
-import type { Submission } from '../utils/services';
+import type { Submission, Assignment } from '../utils/services';
 import {
   Upload,
   Play,
@@ -27,15 +29,21 @@ const AssignmentDetail: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
+  const [assignment, setAssignment] = useState<Assignment | null>(null);
+
   const fetchData = async () => {
     if (!id) return;
     try {
+      // Fetch assignment info directly
+      const aRes = await getAssignment(Number(id));
+      setAssignment(aRes.data);
+
       if (user?.role === 'teacher') {
         const res = await getAssignmentSubmissions(Number(id));
         setSubmissions(res.data);
       } else {
-        const res = await getAssignmentSubmissions(Number(id));
-        setSubmissions(res.data.filter(s => s.student_id === user?.id));
+        const res = await getMySubmission(Number(id));
+        setSubmissions(res.data ? [res.data] : []);
       }
     } catch (err) {
       console.error(err);
@@ -55,7 +63,7 @@ const AssignmentDetail: React.FC = () => {
     setUploading(true);
     try {
       const uploadRes = await uploadFile(selectedFile);
-      const fileId = uploadRes.data.file_id;
+      const fileId = uploadRes.data.id;
       await submitAssignment(Number(id), fileId);
       alert('Assignment submitted successfully!');
       setSelectedFile(null);
@@ -67,9 +75,18 @@ const AssignmentDetail: React.FC = () => {
     }
   };
 
-  const handleRunEvaluation = async (submissionId: number) => {
+  const handleRunEvaluation = async (submission: Submission) => {
+    if (!assignment || !user) return;
     try {
-      await startEvaluation({ submission_id: submissionId, model: 'gemini-1.5-pro-latest' });
+      await startEvaluation({
+        submission_id: submission.id,
+        assignment_id: assignment.id,
+        file_id: submission.file_id,
+        marking_strategy: assignment.marking_strategy,
+        prompt: assignment.default_prompt,
+        teacher_id: user.id,
+        student_id: submission.student_id
+      });
       alert('Evaluation job started!');
       fetchData();
     } catch (err) {
@@ -136,7 +153,7 @@ const AssignmentDetail: React.FC = () => {
                     <td style={{ padding: '1rem', textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                         {user?.role === 'teacher' && s.status === 'submitted' && (
-                          <button className="btn btn-primary" style={{ padding: '0.2rem 0.5rem' }} onClick={() => handleRunEvaluation(s.id)}>
+                          <button className="btn btn-primary" style={{ padding: '0.2rem 0.5rem' }} onClick={() => handleRunEvaluation(s)}>
                             <Play size={16} /> Run Evaluation
                           </button>
                         )}

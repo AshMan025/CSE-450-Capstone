@@ -44,6 +44,24 @@ def create_initial_mark(
     db.refresh(new_mark)
     return new_mark
 
+@app.get("/submission/{submission_id}", response_model=schemas.MarkResponse)
+def get_submission_mark(
+    submission_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: dict = Depends(dependencies.get_current_user)
+):
+    mark = db.query(models.Mark).filter(models.Mark.submission_id == submission_id).first()
+    if not mark:
+        raise HTTPException(status_code=404, detail="Mark not found")
+        
+    if current_user["role"] == "student" and mark.student_id != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    if current_user["role"] == "student" and not mark.is_published:
+         raise HTTPException(status_code=403, detail="Mark not yet published")
+         
+    return mark
+
 @app.get("/assignment/{assignment_id}", response_model=List[schemas.MarkResponse])
 def get_assignment_marks(
     assignment_id: int, 

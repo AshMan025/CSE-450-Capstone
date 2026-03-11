@@ -56,10 +56,12 @@ export const getCourseEnrollments = (id: number) => api.get<Enrollment[]>(`/cour
 export const updateEnrollmentStatus = (id: number, status: string) => api.put<Enrollment>(`/courses/enrollments/${id}/status?status=${status}`);
 
 // Assignment API
+export const getAssignment = (id: number) => api.get<Assignment>(`/assignments/${id}`);
 export const getCourseAssignments = (courseId: number) => api.get<Assignment[]>(`/assignments/course/${courseId}`);
 export const createAssignment = (data: Partial<Assignment>) => api.post<Assignment>('/assignments/', data);
 export const submitAssignment = (id: number, file_id: string) => api.post<Submission>(`/assignments/${id}/submit`, { assignment_id: id, file_id });
 export const getAssignmentSubmissions = (id: number) => api.get<Submission[]>(`/assignments/${id}/submissions`);
+export const getMySubmission = (id: number) => api.get<Submission>(`/assignments/${id}/my-submission`);
 
 // File API
 export const uploadFile = (file: File) => {
@@ -76,6 +78,7 @@ export const getEvaluationJob = (id: number) => api.get(`/llm/jobs/${id}`);
 
 // Marks API
 export const getAssignmentMarks = (assignmentId: number) => api.get<Mark[]>(`/marks/assignment/${assignmentId}`);
+export const getMarkBySubmission = (submissionId: number) => api.get<Mark>(`/marks/submission/${submissionId}`);
 export const getStudentMarks = (studentId: number) => api.get<Mark[]>(`/marks/student/${studentId}`);
 export const createInitialMark = (data: any) => api.post<Mark>('/marks/', data);
 export const overrideMark = (id: number, data: any) => api.put<Mark>(`/marks/${id}/override`, data);

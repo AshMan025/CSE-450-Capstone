@@ -9,6 +9,7 @@ class EvaluationRequest(BaseModel):
     marking_strategy: str
     prompt: str
     teacher_id: int
+    student_id: int
     llm_chain: list[str] = ["gemini-1.5-flash", "gemini-1.5-pro"] # fallback sequence
 
 class EvaluationResponse(BaseModel):

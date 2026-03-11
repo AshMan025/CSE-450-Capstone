@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 import httpx
 
 import models, schemas, database, dependencies
@@ -36,6 +36,13 @@ async def create_assignment(
     db.commit()
     db.refresh(new_assignment)
     return new_assignment
+
+@app.get("/{assignment_id}", response_model=schemas.AssignmentResponse)
+def get_assignment(assignment_id: int, db: Session = Depends(database.get_db), current_user: dict = Depends(dependencies.get_current_user)):
+    assignment = db.query(models.Assignment).filter(models.Assignment.id == assignment_id).first()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    return assignment
 
 @app.get("/course/{course_id}", response_model=List[schemas.AssignmentResponse])
 def get_course_assignments(course_id: int, db: Session = Depends(database.get_db), current_user: dict = Depends(dependencies.get_current_user)):
@@ -84,6 +91,17 @@ def submit_assignment(
         db.commit()
         db.refresh(new_submission)
         return new_submission
+
+@app.get("/{assignment_id}/my-submission", response_model=Optional[schemas.SubmissionResponse])
+def get_my_submission(
+    assignment_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: dict = Depends(dependencies.require_student)
+):
+    return db.query(models.Submission).filter(
+        models.Submission.assignment_id == assignment_id,
+        models.Submission.student_id == current_user["id"]
+    ).first()
 
 @app.get("/{assignment_id}/submissions", response_model=List[schemas.SubmissionResponse])
 def get_assignment_submissions(
