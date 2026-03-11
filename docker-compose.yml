@@ -1,0 +1,181 @@
+version: "3.9"
+
+services:
+  # ─────────────────────────────────────────────
+  #  Databases (one per service)
+  # ─────────────────────────────────────────────
+  auth-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_pass
+      POSTGRES_DB: auth_db
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+    networks: [backend]
+
+  course-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: course_user
+      POSTGRES_PASSWORD: course_pass
+      POSTGRES_DB: course_db
+    volumes:
+      - course_db_data:/var/lib/postgresql/data
+    networks: [backend]
+
+  assignment-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: assignment_user
+      POSTGRES_PASSWORD: assignment_pass
+      POSTGRES_DB: assignment_db
+    volumes:
+      - assignment_db_data:/var/lib/postgresql/data
+    networks: [backend]
+
+  file-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: file_user
+      POSTGRES_PASSWORD: file_pass
+      POSTGRES_DB: file_db
+    volumes:
+      - file_db_data:/var/lib/postgresql/data
+    networks: [backend]
+
+  llm-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: llm_user
+      POSTGRES_PASSWORD: llm_pass
+      POSTGRES_DB: llm_db
+    volumes:
+      - llm_db_data:/var/lib/postgresql/data
+    networks: [backend]
+
+  marks-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: marks_user
+      POSTGRES_PASSWORD: marks_pass
+      POSTGRES_DB: marks_db
+    volumes:
+      - marks_db_data:/var/lib/postgresql/data
+    networks: [backend]
+
+  notification-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: notification_user
+      POSTGRES_PASSWORD: notification_pass
+      POSTGRES_DB: notification_db
+    volumes:
+      - notification_db_data:/var/lib/postgresql/data
+    networks: [backend]
+
+  # ─────────────────────────────────────────────
+  #  Microservices
+  # ─────────────────────────────────────────────
+  auth-service:
+    build: ./services/auth-service
+    env_file: ./services/auth-service/.env
+    depends_on: [auth-db]
+    networks: [backend]
+    volumes:
+      - ./services/auth-service:/app
+
+  course-service:
+    build: ./services/course-service
+    env_file: ./services/course-service/.env
+    depends_on: [course-db]
+    networks: [backend]
+    volumes:
+      - ./services/course-service:/app
+
+  assignment-service:
+    build: ./services/assignment-service
+    env_file: ./services/assignment-service/.env
+    depends_on: [assignment-db]
+    networks: [backend]
+    volumes:
+      - ./services/assignment-service:/app
+
+  file-service:
+    build: ./services/file-service
+    env_file: ./services/file-service/.env
+    depends_on: [file-db]
+    networks: [backend]
+    volumes:
+      - ./services/file-service:/app
+      - file_uploads:/app/uploads
+
+  llm-service:
+    build: ./services/llm-service
+    env_file: ./services/llm-service/.env
+    depends_on: [llm-db]
+    networks: [backend]
+    volumes:
+      - ./services/llm-service:/app
+      - file_uploads:/app/uploads  # shared: reads submission files
+
+  marks-service:
+    build: ./services/marks-service
+    env_file: ./services/marks-service/.env
+    depends_on: [marks-db]
+    networks: [backend]
+    volumes:
+      - ./services/marks-service:/app
+
+  notification-service:
+    build: ./services/notification-service
+    env_file: ./services/notification-service/.env
+    depends_on: [notification-db]
+    networks: [backend]
+    volumes:
+      - ./services/notification-service:/app
+
+  # ─────────────────────────────────────────────
+  #  API Gateway (Nginx)
+  # ─────────────────────────────────────────────
+  gateway:
+    image: nginx:alpine
+    ports:
+      - "8000:80"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth-service
+      - course-service
+      - assignment-service
+      - file-service
+      - llm-service
+      - marks-service
+      - notification-service
+    networks: [backend, frontend_net]
+
+  # ─────────────────────────────────────────────
+  #  Frontend (React + Vite)
+  # ─────────────────────────────────────────────
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    networks: [frontend_net]
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  auth_db_data:
+  course_db_data:
+  assignment_db_data:
+  file_db_data:
+  llm_db_data:
+  marks_db_data:
+  notification_db_data:
+  file_uploads:
+
+networks:
+  backend:
+  frontend_net:

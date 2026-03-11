@@ -1,0 +1,36 @@
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Node / frontend
+node_modules/
+dist/
+build/
+.next/
+.turbo/
+
+# Environment / secrets
+.env
+*.env
+*.env.local
+llm-service.env
+
+# Logs / coverage
+logs/
+*.log
+coverage/
+.coverage*
+
+# Local data / uploads
+uploads/
+tmp/
+*.sqlite3
