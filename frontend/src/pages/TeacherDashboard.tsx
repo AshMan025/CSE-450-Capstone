@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { getCourses, createCourse } from '../utils/services';
 import type { Course } from '../utils/services';
 import { PlusCircle, BookOpen, Bot } from 'lucide-react';
 import LLMGuidance from '../components/LLMGuidance';
 
 const TeacherDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -94,7 +95,13 @@ const TeacherDashboard: React.FC = () => {
               <div className="card-body">{course.description || 'No description provided.'}</div>
               <div className="card-footer">
                 <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Active</span>
-                <button className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>Manage</button>
+                <button
+                  className="btn btn-secondary"
+                  style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+                  onClick={() => navigate(`/dashboard/course/${course.id}`)}
+                >
+                  Manage
+                </button>
               </div>
             </div>
           ))}

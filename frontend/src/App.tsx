@@ -7,6 +7,8 @@ import TeacherDashboard from './pages/TeacherDashboard';
 import StudentDashboard from './pages/StudentDashboard';
 import { LogOut } from 'lucide-react';
 
+import { Outlet } from 'react-router-dom';
+
 const DashboardLayout = () => {
   const { user, logout } = useAuth();
 
@@ -27,7 +29,7 @@ const DashboardLayout = () => {
         </div>
       </div>
 
-      {user?.role === 'teacher' ? <TeacherDashboard /> : <StudentDashboard />}
+      <Outlet />
     </div>
   );
 };
@@ -47,22 +49,37 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+import CourseDetail from './pages/CourseDetail';
+import AssignmentDetail from './pages/AssignmentDetail';
+import EvaluationView from './pages/EvaluationView';
+
 const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route
-        path="/dashboard/*"
+        path="/dashboard"
         element={
           <ProtectedRoute>
             <DashboardLayout />
           </ProtectedRoute>
         }
-      />
+      >
+        <Route index element={<Navigate to="courses" />} />
+        <Route path="courses" element={<CourseListWrapper />} />
+        <Route path="course/:id" element={<CourseDetail />} />
+        <Route path="assignment/:id" element={<AssignmentDetail />} />
+        <Route path="evaluation/:id" element={<EvaluationView />} />
+      </Route>
       <Route path="/" element={<Navigate to="/dashboard" />} />
     </Routes>
   );
+};
+
+const CourseListWrapper = () => {
+  const { user } = useAuth();
+  return user?.role === 'teacher' ? <TeacherDashboard /> : <StudentDashboard />;
 };
 
 const App = () => {

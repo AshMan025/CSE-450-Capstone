@@ -1,22 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { getCourses, enrollInCourse } from '../utils/services';
 import type { Course } from '../utils/services';
-import { Search } from 'lucide-react';
+import { Search, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const StudentDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     try {
-      // In a real app we'd have a specific endpoint for student enrollments
-      // For MVP we just fetch all courses and see which ones they are in.
       const coursesRes = await getCourses();
       setCourses(coursesRes.data);
-
-      // Hardcoded: Fetch enrollments - for MVP we actually need an endpoint in course-service like /enrollments/me
-      // But we can just use the courses list to let them enroll.
     } catch (err) {
       console.error(err);
     } finally {
@@ -32,7 +28,7 @@ const StudentDashboard: React.FC = () => {
     try {
       await enrollInCourse(courseId);
       alert('Enrollment requested!');
-      fetchData(); // Simplistic refresh
+      fetchData();
     } catch (err: any) {
       alert(err.response?.data?.detail || 'Failed to enroll');
     }
@@ -56,13 +52,20 @@ const StudentDashboard: React.FC = () => {
             <div key={course.id} className="card">
               <div className="card-title">{course.name}</div>
               <div className="card-body">{course.description || 'No description provided.'}</div>
-              <div className="card-footer">
+              <div className="card-footer" style={{ display: 'flex', gap: '0.5rem' }}>
                 <button
                   className="btn btn-primary"
-                  style={{ width: '100%', padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+                  style={{ flex: 1, padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
                   onClick={() => handleEnroll(course.id)}
                 >
                   Request Enrollment
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+                  onClick={() => navigate(`/dashboard/course/${course.id}`)}
+                >
+                  View <ChevronRight size={14} />
                 </button>
               </div>
             </div>
