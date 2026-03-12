@@ -1,17 +1,25 @@
 import sys
 from google import genai
+from PIL import Image
 
 def check_key(api_key):
     try:
         client = genai.Client(api_key=api_key)
 
+        # load image from same directory
+        image = Image.open("1.png")
+
         response = client.models.generate_content(
             model="gemini-2.5-flash",
-            contents="in a single word say which model are u?"
+            contents=[
+                "Evaluate this image and describe what you see.",
+                image
+            ]
         )
 
         print("✅ VALID KEY (working)")
-        print("Response:", response.text)
+        print("Response:")
+        print(response.text)
 
     except Exception as e:
         err = str(e)

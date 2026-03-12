@@ -3,9 +3,14 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 import os
 import httpx
+import json
+import logging
 
 import models, schemas, database, dependencies, llm_router
 from database import engine
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -46,48 +51,61 @@ async def extract_text_from_file(file_id: str) -> str:
     except Exception as e:
         raise RuntimeError(f"Failed to extract text from {file_path}: {e}")
 
-async def process_evaluation_job(job_id: int, db: Session, req: schemas.EvaluationRequest):
-    job = db.query(models.EvaluationJob).filter(models.EvaluationJob.id == job_id).first()
-    if not job:
-        return
-        
+async def process_evaluation_job(job_id: int, req: schemas.EvaluationRequest):
+    # Background tasks must NOT use request-scoped DB sessions.
+    db = database.SessionLocal()
     try:
-        # 1. Extract text
-        text_content = await extract_text_from_file(req.file_id)
-        
-        # 2. Call LLM Router
-        model_used, parsed_result = await llm_router.evaluate_submission(
-            text_content=text_content,
-            marking_strategy=req.marking_strategy,
-            prompt=req.prompt,
-            fallback_chain=req.llm_chain
-        )
-        
-        job.llm_model_used = model_used
-        job.parsed_result = parsed_result
-        job.status = "completed"
-        
-        # 3. Push to Marks Service
-        marks_service_url = os.environ.get("MARKS_SERVICE_URL", "http://marks-service:8006")
+        job = db.query(models.EvaluationJob).filter(models.EvaluationJob.id == job_id).first()
+        if not job:
+            return
+
         try:
+            # 1. Extract text
+            text_content = await extract_text_from_file(req.file_id)
+            logger.info(f"Successfully extracted {len(text_content)} characters for job {job_id}")
+
+            # 2. Call LLM Router
+            fallback_chain = req.llm_chain if req.llm_chain else [
+                "gemini-2.0-flash",
+                "gemini-2.0-flash-lite",
+                "claude-3-5-sonnet-20240620",
+                "claude-3-haiku-20240307",
+            ]
+            model_used, parsed_result = await llm_router.evaluate_submission(
+                text_content=text_content,
+                marking_strategy=req.marking_strategy,
+                prompt=req.prompt,
+                fallback_chain=fallback_chain
+            )
+
+            job.llm_model_used = model_used
+            job.parsed_result = parsed_result
+            job.raw_response = json.dumps(parsed_result)  # or original text if we want raw
+            job.status = "completed"
+
+            # 3. Push to Marks Service (best-effort but don't swallow details)
+            marks_service_url = os.environ.get("MARKS_SERVICE_URL", "http://marks-service:8006")
             async with httpx.AsyncClient() as client:
-                await client.post(f"{marks_service_url}/", json={
+                resp = await client.post(f"{marks_service_url}/", json={
                     "assignment_id": req.assignment_id,
                     "submission_id": req.submission_id,
                     "student_id": req.student_id,
                     "base_result": parsed_result,
                     "final_score": parsed_result.get("total_score", 0)
                 })
-        except Exception as push_err:
-            logger.error(f"Failed to push mark to marks-service: {push_err}")
-            # We don't fail the whole job if push fails, but it's an issue
+                if resp.status_code == 400 and "already exists" in (resp.text or ""):
+                    logger.info(f"Mark already exists for submission {req.submission_id}; skipping create.")
+                else:
+                    resp.raise_for_status()
 
-    except Exception as e:
-        job.status = "failed"
-        job.error_message = str(e)
+        except Exception as e:
+            job.status = "failed"
+            job.error_message = str(e)
+        finally:
+            job.completed_at = datetime.utcnow()
+            db.commit()
     finally:
-        job.completed_at = datetime.utcnow()
-        db.commit()
+        db.close()
 
 @app.post("/evaluate", response_model=schemas.EvaluationResponse)
 async def start_evaluation(
@@ -108,7 +126,7 @@ async def start_evaluation(
     db.refresh(job)
     
     # Process mostly async via background task because LLMs take time
-    background_tasks.add_task(process_evaluation_job, job.id, db, eval_req)
+    background_tasks.add_task(process_evaluation_job, job.id, eval_req)
     
     return job
 

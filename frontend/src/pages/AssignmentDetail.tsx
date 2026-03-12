@@ -157,8 +157,17 @@ const AssignmentDetail: React.FC = () => {
                             <Play size={16} /> Run Evaluation
                           </button>
                         )}
-                        <button className="btn btn-secondary" style={{ padding: '0.2rem 0.5rem' }} onClick={() => navigate(`/dashboard/evaluation/${s.id}`)}>
-                          {user?.role === 'teacher' && s.status === 'evaluated' ? 'Review & Marks' : 'View Result'} <ChevronRight size={16} />
+                        <button
+                          className="btn btn-secondary"
+                          style={{ padding: '0.2rem 0.5rem', opacity: user?.role === 'student' && s.status !== 'evaluated' ? 0.6 : 1 }}
+                          disabled={user?.role === 'student' && s.status !== 'evaluated'}
+                          title={user?.role === 'student' && s.status !== 'evaluated' ? 'Results not available until evaluation completes.' : undefined}
+                          onClick={() => navigate(`/dashboard/evaluation/${s.id}`)}
+                        >
+                          {user?.role === 'teacher'
+                            ? (s.status === 'evaluated' ? 'Review & Marks' : 'View Result')
+                            : (s.status === 'evaluated' ? 'View Result' : 'Pending')}
+                          <ChevronRight size={16} />
                         </button>
                       </div>
                     </td>

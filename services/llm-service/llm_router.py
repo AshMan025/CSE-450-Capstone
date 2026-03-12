@@ -1,8 +1,8 @@
 import os
 import json
 import logging
-import google.generativeai as genai
-# import anthropic
+from google import genai
+from anthropic import Anthropic
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,17 +11,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-# ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
-
-if GEMINI_API_KEY and GEMINI_API_KEY != "PLACEHOLDER_GEMINI_KEY":
-    genai.configure(api_key=GEMINI_API_KEY)
-
-# if ANTHROPIC_API_KEY and ANTHROPIC_API_KEY != "PLACEHOLDER_ANTHROPIC_KEY":
-#     anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 
 SYSTEM_PROMPT_TEMPLATE = """
 You are an expert exam script evaluator. Your task is to evaluate the student's submission based on the teacher's marking strategy and default prompt.
-You MUST extract the student's answers, evaluate them, and return the result strictly as a valid JSON object. Do NOT wrap the JSON in markdown blocks like ```json ... ```.
+You MUST extract the student's answers, evaluate them, and return the result strictly as a valid JSON object.
 
 Required JSON Structure:
 {{
@@ -52,19 +46,37 @@ async def evaluate_submission(text_content: str, marking_strategy: str, prompt: 
     for model_name in fallback_chain:
         try:
             logger.info(f"Trying LLM evaluation with model: {model_name}")
-            if "gemini" in model_name:
-                result = await _call_gemini(model_name, full_prompt)
-            # elif "claude" in model_name:
-            #     result = await _call_claude(model_name, sys_prompt, text_content)
+
+            # Provider routing: Gemini vs Anthropic
+            if model_name.startswith("claude"):
+                if not ANTHROPIC_API_KEY:
+                    raise ValueError("ANTHROPIC_API_KEY is not set")
+                aclient = Anthropic(api_key=ANTHROPIC_API_KEY)
+                msg = aclient.messages.create(
+                    model=model_name,
+                    max_tokens=2048,
+                    temperature=0,
+                    system=sys_prompt,
+                    messages=[{"role": "user", "content": text_content}],
+                )
+                # Anthropic returns a list of content blocks; take combined text
+                result = "".join([b.text for b in msg.content if getattr(b, "type", None) == "text"])
             else:
-                raise ValueError(f"Unknown model prefix in {model_name}")
+                if not GEMINI_API_KEY:
+                    raise ValueError("GEMINI_API_KEY is not set")
+                gclient = genai.Client(api_key=GEMINI_API_KEY)
+                response = gclient.models.generate_content(
+                    model=model_name,
+                    contents=full_prompt
+                )
+                result = response.text
             
             # Clean possible markdown formatting
             cleaned_result = result.strip()
-            if cleaned_result.startswith("```json"):
-                cleaned_result = cleaned_result[7:]
-            if cleaned_result.endswith("```"):
-                cleaned_result = cleaned_result[:-3]
+            if "```json" in cleaned_result:
+                cleaned_result = cleaned_result.split("```json")[1].split("```")[0]
+            elif "```" in cleaned_result:
+                cleaned_result = cleaned_result.split("```")[1].split("```")[0]
                 
             parsed_json = json.loads(cleaned_result.strip())
             return model_name, parsed_json
@@ -75,19 +87,3 @@ async def evaluate_submission(text_content: str, marking_strategy: str, prompt: 
             continue
             
     raise RuntimeError(f"All models in fallback chain failed. Last error: {last_error}")
-
-
-async def _call_gemini(model_name: str, full_prompt: str) -> str:
-    # Uses the newer async Google SDK or equivalent, for MVP making synchronous call in async func wrapper is acceptable.
-    model = genai.GenerativeModel(model_name)
-    response = model.generate_content(full_prompt)
-    return response.text
-
-# async def _call_claude(model_name: str, sys_prompt: str, user_content: str) -> str:
-#     response = anthropic_client.messages.create(
-#         model=model_name,
-#         max_tokens=2000,
-#         system=sys_prompt,
-#         messages=[{"role": "user", "content": f"Student Submission Content:\n{user_content}"}]
-#     )
-#     return response.content[0].text

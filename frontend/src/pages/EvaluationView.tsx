@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -22,6 +22,8 @@ const EvaluationView: React.FC = () => {
   const [mark, setMark] = useState<Mark | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const retryTimerRef = useRef<number | null>(null);
 
   const [score, setScore] = useState<number>(0);
   const [isPublished, setIsPublished] = useState(false);
@@ -30,6 +32,10 @@ const EvaluationView: React.FC = () => {
     const fetchData = async () => {
       if (!id) return;
       try {
+        if (retryTimerRef.current) {
+          window.clearTimeout(retryTimerRef.current);
+          retryTimerRef.current = null;
+        }
         const res = await getMarkBySubmission(Number(id));
         const currentMark = res.data;
 
@@ -37,10 +43,19 @@ const EvaluationView: React.FC = () => {
           setMark(currentMark);
           setScore(currentMark.final_score);
           setIsPublished(currentMark.is_published);
+          setError(null);
         }
       } catch (err: any) {
         if (err.response?.status === 404) {
-          setError('Evaluation results not found yet. It may still be processing.');
+          // Marks are created async by the evaluation job; give it a short window to appear.
+          const maxRetries = 10;
+          const delayMs = 1500;
+          if (retryCount < maxRetries) {
+            setError(`Evaluation results not found yet. Retrying... (${retryCount + 1}/${maxRetries})`);
+            retryTimerRef.current = window.setTimeout(() => setRetryCount((c) => c + 1), delayMs);
+          } else {
+            setError('Evaluation results not found yet. It may still be processing.');
+          }
         } else if (err.response?.status === 403) {
           setError('Mark not yet published or you are not authorized.');
         } else {
@@ -51,7 +66,13 @@ const EvaluationView: React.FC = () => {
       }
     };
     fetchData();
-  }, [id]);
+    return () => {
+      if (retryTimerRef.current) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+  }, [id, retryCount]);
 
   const handleUpdate = async () => {
     if (!mark) return;

@@ -10,7 +10,7 @@ class EvaluationRequest(BaseModel):
     prompt: str
     teacher_id: int
     student_id: int
-    llm_chain: list[str] = ["gemini-1.5-flash", "gemini-1.5-pro"] # fallback sequence
+    llm_chain: list[str] = ["gemini-2.5-flash", "gemini-1.5-flash"] # fallback sequence
 
 class EvaluationResponse(BaseModel):
     id: int
