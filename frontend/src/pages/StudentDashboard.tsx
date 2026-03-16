@@ -8,6 +8,7 @@ const StudentDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchData = async () => {
     try {
@@ -40,7 +41,14 @@ const StudentDashboard: React.FC = () => {
         <h2>Available Courses</h2>
         <div style={{ position: 'relative' }}>
           <Search size={18} style={{ position: 'absolute', left: '10px', top: '10px', color: 'var(--color-text-secondary)' }} />
-          <input type="text" className="form-input" placeholder="Search courses..." style={{ paddingLeft: '2.5rem', width: '250px' }} />
+          <input
+            type="text"
+            className="form-input"
+            placeholder="Search courses..."
+            style={{ paddingLeft: '2.5rem', width: '250px' }}
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
         </div>
       </div>
 
@@ -48,7 +56,16 @@ const StudentDashboard: React.FC = () => {
         <p>Loading courses...</p>
       ) : (
         <div className="grid-cards">
-          {courses.map(course => (
+          {courses
+            .filter(course => {
+              if (!searchTerm.trim()) return true;
+              const term = searchTerm.toLowerCase();
+              return (
+                course.name.toLowerCase().includes(term) ||
+                (course.description || '').toLowerCase().includes(term)
+              );
+            })
+            .map(course => (
             <div key={course.id} className="card">
               <div className="card-title">{course.name}</div>
               <div className="card-body">{course.description || 'No description provided.'}</div>

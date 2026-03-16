@@ -14,7 +14,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (access_token: string, refresh_token: string) => void;
+  login: (access_token: string, refresh_token: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -49,15 +49,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     loadUser();
   }, []);
 
-  const login = (access_token: string, refresh_token: string) => {
+  const login = async (access_token: string, refresh_token: string) => {
     localStorage.setItem('access_token', access_token);
     localStorage.setItem('refresh_token', refresh_token);
 
-    // In a real app we might decode the token here or fetch /me again.
-    // For MVP, we'll force a reload to let the useEffect fetch the user, or we can fetch directly.
-    api.get('/auth/me', { headers: { Authorization: `Bearer ${access_token}` } })
-      .then(res => setUser(res.data))
-      .catch(console.error);
+    // Fetch the user profile immediately so protected routes see an authenticated user
+    try {
+      const res = await api.get('/auth/me', { headers: { Authorization: `Bearer ${access_token}` } });
+      setUser(res.data);
+    } catch (err) {
+      console.error(err);
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      setUser(null);
+      throw err;
+    }
   };
 
   const logout = () => {

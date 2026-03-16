@@ -45,3 +45,19 @@ async def verify_course_teacher(course_id: int, token: str):
             raise HTTPException(status_code=404, detail="Course not found")
         # Ensure course data implies the caller is the teacher (course service doesn't strictly hide the course but we assume teacher validation)
         return response.json()
+
+async def verify_course_access(course_id: int, token: str):
+    """
+    Verifies the current user can access the course. Course service enforces:
+    - teacher: must be the owner
+    - student: must have approved enrollment
+    """
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{COURSE_SERVICE_URL}/{course_id}", headers={"Authorization": f"Bearer {token}"})
+        if response.status_code == 404:
+            raise HTTPException(status_code=404, detail="Course not found")
+        if response.status_code == 403:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        if response.status_code != 200:
+            raise HTTPException(status_code=400, detail="Could not verify course access")
+        return response.json()

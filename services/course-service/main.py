@@ -34,10 +34,30 @@ def list_courses(db: Session = Depends(database.get_db), current_user: dict = De
         return db.query(models.Course).all()
 
 @app.get("/{course_id}", response_model=schemas.CourseResponse)
-def get_course(course_id: int, db: Session = Depends(database.get_db)):
+def get_course(
+    course_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: dict = Depends(dependencies.get_current_user),
+):
     course = db.query(models.Course).filter(models.Course.id == course_id).first()
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
+
+    # Teachers can access their own courses
+    if current_user["role"] == "teacher":
+        if course.teacher_id != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        return course
+
+    # Students must be approved/enrolled to access course details
+    enrollment = db.query(models.Enrollment).filter(
+        models.Enrollment.course_id == course_id,
+        models.Enrollment.student_id == current_user["id"],
+        models.Enrollment.status == "approved",
+    ).first()
+    if not enrollment:
+        raise HTTPException(status_code=403, detail="Not enrolled")
+
     return course
 
 @app.post("/{course_id}/enroll", response_model=schemas.EnrollmentResponse)

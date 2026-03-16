@@ -46,8 +46,12 @@ def get_assignment(assignment_id: int, db: Session = Depends(database.get_db), c
 
 @app.get("/course/{course_id}", response_model=List[schemas.AssignmentResponse])
 def get_course_assignments(course_id: int, db: Session = Depends(database.get_db), current_user: dict = Depends(dependencies.get_current_user)):
-    # Simple list, should optimally check if user is enrolled or teaching this course,
-    # but for MVP we assume authenticated users can view assignments of a course they query
+    # Enforce access:
+    # - teacher can view their own course assignments
+    # - student can view only if approved enrollment exists
+    # Course service enforces this on GET /{course_id}, so we proxy-check it here.
+    import anyio
+    anyio.run(dependencies.verify_course_access, course_id, current_user["token"])
     assignments = db.query(models.Assignment).filter(models.Assignment.course_id == course_id).all()
     return assignments
 

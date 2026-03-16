@@ -62,6 +62,8 @@ export const createAssignment = (data: Partial<Assignment>) => api.post<Assignme
 export const submitAssignment = (id: number, file_id: string) => api.post<Submission>(`/assignments/${id}/submit`, { assignment_id: id, file_id });
 export const getAssignmentSubmissions = (id: number) => api.get<Submission[]>(`/assignments/${id}/submissions`);
 export const getMySubmission = (id: number) => api.get<Submission>(`/assignments/${id}/my-submission`);
+export const updateSubmissionStatus = (submissionId: number, status: string) =>
+  api.put(`/assignments/submissions/${submissionId}/status?status=${status}`);
 
 // File API
 export const uploadFile = (file: File) => {
