@@ -20,7 +20,7 @@ app = FastAPI(title="Auth Service")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = os.environ.get("SECRET_KEY", "PLACEHOLDER_SECRET_KEY_CHANGE_ME_32CHARS")
 ALGORITHM = os.environ.get("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", 1440))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.environ.get("REFRESH_TOKEN_EXPIRE_DAYS", 7))
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
@@ -106,6 +106,15 @@ def get_me(current_user: models.User = Depends(get_current_user)):
 def validate_token(current_user: models.User = Depends(get_current_user)):
     """Internal endpoint used by other services to validate a token and get user info."""
     return {"id": current_user.id, "email": current_user.email, "role": current_user.role}
+
+
+@app.get("/users/{user_id}", response_model=schemas.UserResponse)
+def get_user(user_id: int, db: Session = Depends(database.get_db)):
+    """Return public profile information for a user by id. Used by other services to display names."""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 @app.get("/health")
 def health_check():

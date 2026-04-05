@@ -9,6 +9,8 @@ const StudentDashboard: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  // Track re-applied enrollments client-side to show 'Request Sent' label
+  const [reapplied, setReapplied] = useState<Record<number, boolean>>({});
 
   const fetchData = async () => {
     try {
@@ -27,8 +29,14 @@ const StudentDashboard: React.FC = () => {
 
   const handleEnroll = async (courseId: number) => {
     try {
-      await enrollInCourse(courseId);
-      alert('Enrollment requested!');
+      const res = await enrollInCourse(courseId);
+      // backend may signal re-apply via `reapplied` flag
+      if (res && res.data && (res.data as any).reapplied) {
+        setReapplied(prev => ({ ...prev, [courseId]: true }));
+        alert('Enrollment request sent (re-apply)');
+      } else {
+        alert('Enrollment requested!');
+      }
       fetchData();
     } catch (err: any) {
       alert(err.response?.data?.detail || 'Failed to enroll');
@@ -70,13 +78,31 @@ const StudentDashboard: React.FC = () => {
               <div className="card-title">{course.name}</div>
               <div className="card-body">{course.description || 'No description provided.'}</div>
               <div className="card-footer" style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  className="btn btn-primary"
-                  style={{ flex: 1, padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
-                  onClick={() => handleEnroll(course.id)}
-                >
-                  Request Enrollment
-                </button>
+                {course.enrollment_status === 'pending' ? (
+                  <button
+                    className="btn btn-secondary"
+                    style={{ flex: 1, padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+                    disabled
+                  >
+                    {reapplied[course.id] ? 'Request Sent' : 'Pending Request'}
+                  </button>
+                ) : course.enrollment_status === 'approved' ? (
+                  <button
+                    className="btn btn-primary"
+                    style={{ flex: 1, padding: '0.4rem 0.8rem', fontSize: '0.8rem', background: 'var(--color-success)', borderColor: 'var(--color-success)', color: '#fff' }}
+                    disabled
+                  >
+                    Enrolled
+                  </button>
+                ) : (
+                  <button
+                    className="btn btn-primary"
+                    style={{ flex: 1, padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+                    onClick={() => handleEnroll(course.id)}
+                  >
+                    Request Enrollment
+                  </button>
+                )}
                 <button
                   className="btn btn-secondary"
                   style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}

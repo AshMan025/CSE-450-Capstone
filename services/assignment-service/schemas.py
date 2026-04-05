@@ -32,6 +32,8 @@ class SubmissionCreate(SubmissionBase):
 class SubmissionResponse(SubmissionBase):
     id: int
     student_id: int
+    # Optional human-readable student name (enriched by calling auth-service)
+    student_name: Optional[str] = None
     status: str
     submitted_at: datetime
 

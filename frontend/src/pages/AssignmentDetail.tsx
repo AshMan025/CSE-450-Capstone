@@ -143,7 +143,9 @@ const AssignmentDetail: React.FC = () => {
               <tbody>
                 {submissions.map(s => (
                   <tr key={s.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                    {user?.role === 'teacher' && <td style={{ padding: '1rem' }}>Student #{s.student_id}</td>}
+                    {user?.role === 'teacher' && (
+                      <td style={{ padding: '1rem' }}>{s.student_name ? s.student_name : `Student #${s.student_id}`}</td>
+                    )}
                     <td style={{ padding: '1rem' }}>
                       <span className={`badge ${s.status === 'submitted' ? 'badge-primary' : s.status === 'evaluated' ? 'badge-success' : 'badge-secondary'}`}>
                         {s.status}

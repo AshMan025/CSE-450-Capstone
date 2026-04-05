@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import httpx
+import os
 
 import models, schemas, database, dependencies
 from database import engine
@@ -108,12 +109,38 @@ def get_my_submission(
     ).first()
 
 @app.get("/{assignment_id}/submissions", response_model=List[schemas.SubmissionResponse])
-def get_assignment_submissions(
+async def get_assignment_submissions(
     assignment_id: int,
     db: Session = Depends(database.get_db),
     current_user: dict = Depends(dependencies.require_teacher)
 ):
-    return db.query(models.Submission).filter(models.Submission.assignment_id == assignment_id).all()
+    """Return submissions for an assignment, enriched with student names from auth-service when available."""
+    AUTH_SERVICE_URL = os.environ.get("AUTH_SERVICE_URL", "http://auth-service:8001")
+
+    submissions = db.query(models.Submission).filter(models.Submission.assignment_id == assignment_id).all()
+
+    enriched = []
+    async with httpx.AsyncClient() as client:
+        for s in submissions:
+            student_name = None
+            try:
+                resp = await client.get(f"{AUTH_SERVICE_URL}/users/{s.student_id}")
+                if resp.status_code == 200:
+                    student_name = resp.json().get("name")
+            except Exception:
+                student_name = None
+
+            enriched.append({
+                "id": s.id,
+                "assignment_id": s.assignment_id,
+                "student_id": s.student_id,
+                "student_name": student_name,
+                "file_id": s.file_id,
+                "status": s.status,
+                "submitted_at": s.submitted_at,
+            })
+
+    return enriched
 
 @app.put("/submissions/{submission_id}/status")
 def update_submission_status(

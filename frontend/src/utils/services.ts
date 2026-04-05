@@ -6,6 +6,9 @@ export interface Course {
   description: string;
   teacher_id: number;
   created_at: string;
+  // Student-specific optional fields
+  enrollment_status?: string;
+  enrollment_id?: number;
 }
 
 export interface Enrollment {
@@ -14,6 +17,9 @@ export interface Enrollment {
   student_id: number;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
+  // Optional student name and reapply flag
+  student_name?: string;
+  reapplied?: boolean;
 }
 
 export interface Assignment {
@@ -31,6 +37,8 @@ export interface Submission {
   id: number;
   assignment_id: number;
   student_id: number;
+  // Optional human-readable student name provided by backend
+  student_name?: string;
   file_id: string;
   status: string;
   submitted_at: string;

@@ -201,7 +201,7 @@ const CourseDetail: React.FC = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead style={{ background: 'rgba(255,255,255,0.05)' }}>
                 <tr>
-                  <th style={{ padding: '1rem', textAlign: 'left' }}>Student ID</th>
+                  <th style={{ padding: '1rem', textAlign: 'left' }}>Student</th>
                   <th style={{ padding: '1rem', textAlign: 'left' }}>Status</th>
                   <th style={{ padding: '1rem', textAlign: 'right' }}>Actions</th>
                 </tr>
@@ -212,7 +212,7 @@ const CourseDetail: React.FC = () => {
                 ) : (
                   enrollments.map(e => (
                     <tr key={e.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '1rem' }}>Student #{e.student_id}</td>
+                      <td style={{ padding: '1rem' }}>{e.student_name ? e.student_name : `Student #${e.student_id}`}</td>
                       <td style={{ padding: '1rem' }}>
                         <span className={`badge ${e.status === 'approved' ? 'badge-success' : e.status === 'pending' ? 'badge-primary' : 'badge-danger'}`}>
                           {e.status}
