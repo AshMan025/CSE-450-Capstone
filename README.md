@@ -10,7 +10,7 @@ git clone https://github.com/AshMan025/CSE-450-Capstone
 cd CSE-450-Capstone
 ```
 
-###Configure environment files
+### Configure environment files
 Each microservice reads its own .env.
 
 Copy the example env (if present) and fill values as needed:
