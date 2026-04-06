@@ -15,7 +15,8 @@ Each microservice reads its own .env.
 
 Copy the example env (if present) and fill values as needed:
 cp services/auth-service/.env.example services/auth-service/.env
-# Repeat for other services if you have .env.example files
+
+Repeat for other services if you have .env.example files
 
 ### Finally run the docker-run.sh
 
