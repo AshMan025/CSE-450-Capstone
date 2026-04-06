@@ -48,6 +48,7 @@ const AssignmentDetail: React.FC = () => {
   const [uploading, setUploading] = useState(false);
 
   const [assignment, setAssignment] = useState<Assignment | null>(null);
+  const deadlinePassed = assignment ? new Date() > new Date(assignment.deadline) : false;
 
   const fetchData = async () => {
     if (!id) return;
@@ -91,6 +92,7 @@ const AssignmentDetail: React.FC = () => {
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFile || !id) return;
+    if (deadlinePassed) return;
 
     setUploading(true);
     try {
@@ -101,7 +103,11 @@ const AssignmentDetail: React.FC = () => {
       setSelectedFile(null);
       fetchData();
     } catch (err) {
-      alert('Failed to submit assignment');
+      const message =
+        (err as any)?.response?.data?.detail ||
+        (err as any)?.message ||
+        'Failed to submit assignment';
+      alert(message);
     } finally {
       setUploading(false);
     }
@@ -195,12 +201,29 @@ const AssignmentDetail: React.FC = () => {
                 type="file"
                 className="form-input"
                 required
+                disabled={deadlinePassed}
                 onChange={e => setSelectedFile(e.target.files?.[0] || null)}
               />
             </div>
-            <button type="submit" className="btn btn-primary" disabled={uploading}>
-              {uploading ? 'Uploading...' : 'Submit Assignment'}
-            </button>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button type="submit" className="btn btn-primary" disabled={uploading || deadlinePassed}>
+                {deadlinePassed ? 'Deadline Passed' : uploading ? 'Uploading...' : 'Submit Assignment'}
+              </button>
+              {deadlinePassed && (
+                <div
+                  style={{
+                    padding: '0.6rem 0.8rem',
+                    borderRadius: '0.6rem',
+                    background: 'rgba(239, 68, 68, 0.10)',
+                    border: '1px solid rgba(239, 68, 68, 0.20)',
+                    color: 'var(--color-error)',
+                    fontSize: '0.9rem',
+                  }}
+                >
+                  Deadline has passed — you can’t submit this assignment.
+                </div>
+              )}
+            </div>
           </form>
         </div>
       )}
