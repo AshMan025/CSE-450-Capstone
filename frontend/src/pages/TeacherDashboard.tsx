@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCourses, createCourse } from '../utils/services';
 import type { Course } from '../utils/services';
-import { PlusCircle, BookOpen, Bot } from 'lucide-react';
+import { PlusCircle, BookOpen, Bot, Key } from 'lucide-react';
 import LLMGuidance from '../components/LLMGuidance';
 
 const TeacherDashboard: React.FC = () => {
@@ -48,6 +48,9 @@ const TeacherDashboard: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h2>My Courses</h2>
         <div style={{ display: 'flex', gap: '1rem' }}>
+          <button className="btn btn-secondary" onClick={() => navigate('/dashboard/api-keys')}>
+            <Key size={18} /> Manage API Keys
+          </button>
           <button className="btn btn-secondary" onClick={() => setShowLLMGuide(!showLLMGuide)}>
             <Bot size={18} /> LLM Guide
           </button>

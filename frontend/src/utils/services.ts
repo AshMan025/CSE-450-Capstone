@@ -86,6 +86,12 @@ export const uploadFile = (file: File) => {
 export const startEvaluation = (data: any) => api.post('/llm/evaluate', data);
 export const getEvaluationJob = (id: number) => api.get(`/llm/jobs/${id}`);
 
+// API Key Management
+export const getAPIKeys = () => api.get('/llm/api-keys');
+export const createAPIKey = (data: any) => api.post('/llm/api-keys', data);
+export const testAPIKey = (data: any) => api.post('/llm/api-keys/test', data);
+export const deleteAPIKey = (id: number) => api.delete(`/llm/api-keys/${id}`);
+
 // Marks API
 export const getAssignmentMarks = (assignmentId: number) => api.get<Mark[]>(`/marks/assignment/${assignmentId}`);
 export const getMarkBySubmission = (submissionId: number) => api.get<Mark>(`/marks/submission/${submissionId}`);

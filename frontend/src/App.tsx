@@ -52,6 +52,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 import CourseDetail from './pages/CourseDetail';
 import AssignmentDetail from './pages/AssignmentDetail';
 import EvaluationView from './pages/EvaluationView';
+import APIKeyManagement from './pages/APIKeyManagement';
 
 const AppRoutes = () => {
   return (
@@ -71,6 +72,7 @@ const AppRoutes = () => {
         <Route path="course/:id" element={<CourseDetail />} />
         <Route path="assignment/:id" element={<AssignmentDetail />} />
         <Route path="evaluation/:id" element={<EvaluationView />} />
+        <Route path="api-keys" element={<APIKeyManagement />} />
       </Route>
       <Route path="/" element={<Navigate to="/dashboard" />} />
     </Routes>

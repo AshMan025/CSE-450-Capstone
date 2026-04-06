@@ -21,3 +21,18 @@ class EvaluationJob(Base):
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     completed_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class APIKey(Base):
+    __tablename__ = "api_keys"
+
+    id = Column(Integer, primary_key=True, index=True)
+    teacher_id = Column(Integer, index=True)
+    provider = Column(String, index=True)
+    model_name = Column(String, index=True)
+    encrypted_key = Column(String)
+    is_valid = Column(String, default="untested")
+    last_tested_at = Column(DateTime(timezone=True), nullable=True)
+    error_message = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
