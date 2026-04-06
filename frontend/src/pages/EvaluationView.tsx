@@ -80,7 +80,7 @@ const EvaluationView: React.FC = () => {
   const [retryCount, setRetryCount] = useState(0);
   const retryTimerRef = useRef<number | null>(null);
 
-  const [score, setScore] = useState<number>(0);
+  const [scoreInput, setScoreInput] = useState<string>('0');
   const [isPublished, setIsPublished] = useState(false);
   const [activeTab, setActiveTab] = useState<'formatted' | 'edit' | 'raw'>('formatted');
   const [editorResult, setEditorResult] = useState<EvaluationResult | null>(null);
@@ -98,7 +98,7 @@ const EvaluationView: React.FC = () => {
 
         if (currentMark) {
           setMark(currentMark);
-          setScore(currentMark.final_score);
+          setScoreInput(String(currentMark.final_score ?? 0));
           setIsPublished(currentMark.is_published);
           setError(null);
         }
@@ -137,23 +137,23 @@ const EvaluationView: React.FC = () => {
       alert('Nothing to save yet.');
       return;
     }
-
-    // If breakdown is present, recompute total score from teacher-edited values
-    let computedTotal = score;
-    if (editorResult.breakdown && editorResult.breakdown.length > 0) {
-      computedTotal = editorResult.breakdown.reduce(
-        (sum, item) => sum + (Number(item.score) || 0),
-        0
-      );
-      setScore(computedTotal);
+    const parsed = Number(scoreInput);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      alert('Please enter a valid non-negative final score.');
+      return;
     }
+    const finalScore = Math.round(parsed);
 
     try {
-      await overrideMark(mark.id, {
-        final_score: computedTotal,
+      const overrideRes = await overrideMark(mark.id, {
+        final_score: finalScore,
         teacher_override: editorResult
       });
-      await publishMark(mark.id, isPublished);
+      setMark(overrideRes.data);
+      setScoreInput(String(overrideRes.data.final_score));
+
+      const publishRes = await publishMark(mark.id, isPublished);
+      setMark(publishRes.data);
       if (isPublished) {
         // When results are published, reflect that in the submission status
         // so students see "evaluated" instead of "pending".
@@ -178,12 +178,15 @@ const EvaluationView: React.FC = () => {
 
   useEffect(() => {
     if (effectiveResult) {
-      setEditorResult(prev => prev ?? { ...effectiveResult });
-      if (typeof effectiveResult.total_score === 'number') {
-        setScore(effectiveResult.total_score);
-      }
+      setEditorResult({ ...effectiveResult });
     }
   }, [effectiveResult]);
+
+  useEffect(() => {
+    if (mark) {
+      setScoreInput(String(mark.final_score ?? 0));
+    }
+  }, [mark]);
 
   const isTeacher = user?.role === 'teacher';
 
@@ -390,8 +393,8 @@ const EvaluationView: React.FC = () => {
                 type="number"
                 className="form-input"
                 disabled={!isTeacher}
-                value={score}
-                onChange={e => setScore(Number(e.target.value))}
+                value={scoreInput}
+                onChange={e => setScoreInput(e.target.value)}
               />
             </div>
 
