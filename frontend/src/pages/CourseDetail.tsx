@@ -225,7 +225,9 @@ const CourseDetail: React.FC = () => {
                               <CheckCircle size={16} color="var(--color-success)" />
                             </button>
                             <button className="btn btn-secondary" style={{ padding: '0.2rem 0.5rem' }} onClick={() => handleStatusUpdate(e.id, 'rejected')}>
-                              <XCircle size={16} color="var(--color-danger)" />
+                              <span style={{ color: 'var(--color-error)' }}>
+                                <XCircle size={16} />
+                              </span>
                             </button>
                           </div>
                         )}
