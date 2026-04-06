@@ -15,10 +15,10 @@ const LLMGuidance: React.FC = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
 
-        <div style={{ background: 'rgba(15, 23, 42, 0.4)', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+        <div style={{ background: 'var(--guide-card-bg)', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
             <Zap size={20} color="#f59e0b" />
-            <h4 style={{ margin: 0, color: '#f8fafc' }}>Gemini 1.5 Flash</h4>
+            <h4 style={{ margin: 0, color: 'var(--color-text-primary)' }}>Gemini 1.5 Flash</h4>
             <span className="badge badge-success" style={{ marginLeft: 'auto', fontSize: '0.65rem' }}>Fastest</span>
           </div>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
@@ -28,10 +28,10 @@ const LLMGuidance: React.FC = () => {
           </ul>
         </div>
 
-        <div style={{ background: 'rgba(15, 23, 42, 0.4)', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+        <div style={{ background: 'var(--guide-card-bg)', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
             <BrainCircuit size={20} color="#818cf8" />
-            <h4 style={{ margin: 0, color: '#f8fafc' }}>Gemini 1.5 Pro</h4>
+            <h4 style={{ margin: 0, color: 'var(--color-text-primary)' }}>Gemini 1.5 Pro</h4>
             <span className="badge badge-primary" style={{ marginLeft: 'auto', fontSize: '0.65rem' }}>Smartest</span>
           </div>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>

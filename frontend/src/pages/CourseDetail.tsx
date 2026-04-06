@@ -199,7 +199,7 @@ const CourseDetail: React.FC = () => {
           <h2>Student Enrollments</h2>
           <div className="glass-panel" style={{ padding: '0', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ background: 'rgba(255,255,255,0.05)' }}>
+              <thead style={{ background: 'var(--table-head-bg)' }}>
                 <tr>
                   <th style={{ padding: '1rem', textAlign: 'left' }}>Student</th>
                   <th style={{ padding: '1rem', textAlign: 'left' }}>Status</th>
@@ -211,7 +211,7 @@ const CourseDetail: React.FC = () => {
                   <tr><td colSpan={3} style={{ padding: '2rem', textAlign: 'center' }}>No enrollment requests.</td></tr>
                 ) : (
                   enrollments.map(e => (
-                    <tr key={e.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                    <tr key={e.id} style={{ borderTop: '1px solid var(--table-row-border)' }}>
                       <td style={{ padding: '1rem' }}>{e.student_name ? e.student_name : `Student #${e.student_id}`}</td>
                       <td style={{ padding: '1rem' }}>
                         <span className={`badge ${e.status === 'approved' ? 'badge-success' : e.status === 'pending' ? 'badge-primary' : 'badge-danger'}`}>

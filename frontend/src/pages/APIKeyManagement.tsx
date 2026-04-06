@@ -252,7 +252,7 @@ const APIKeyManagement: React.FC = () => {
       ) : (
         <div className="glass-panel" style={{ padding: '0', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead style={{ background: 'rgba(255,255,255,0.05)' }}>
+            <thead style={{ background: 'var(--table-head-bg)' }}>
               <tr>
                 <th style={{ padding: '1rem', textAlign: 'left' }}>Provider</th>
                 <th style={{ padding: '1rem', textAlign: 'left' }}>Model</th>
@@ -263,7 +263,7 @@ const APIKeyManagement: React.FC = () => {
             </thead>
             <tbody>
               {keys.map(key => (
-                <tr key={key.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                <tr key={key.id} style={{ borderTop: '1px solid var(--table-row-border)' }}>
                   <td style={{ padding: '1rem' }}>
                     <span style={{ textTransform: 'capitalize', fontWeight: 500 }}>{key.provider}</span>
                   </td>

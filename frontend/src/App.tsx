@@ -1,23 +1,41 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import TeacherDashboard from './pages/TeacherDashboard';
 import StudentDashboard from './pages/StudentDashboard';
-import { LogOut } from 'lucide-react';
-
+import { LogOut, Moon, Sun } from 'lucide-react';
 import { Outlet } from 'react-router-dom';
+import CourseDetail from './pages/CourseDetail';
+import AssignmentDetail from './pages/AssignmentDetail';
+import EvaluationView from './pages/EvaluationView';
+import APIKeyManagement from './pages/APIKeyManagement';
 
 const DashboardLayout = () => {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const nextMode = theme === 'dark' ? 'light' : 'dark';
 
   return (
     <div className="container animate-fade-in" style={{ padding: '2rem', maxWidth: '1400px' }}>
       <div className="navbar" style={{ borderRadius: 'var(--radius-lg)', marginBottom: '2rem' }}>
-        <div className="nav-brand">ExamAI Eval</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
+          <div className="nav-brand">ExamAI Eval</div>
+          <button
+            type="button"
+            className="theme-toggle no-print"
+            onClick={toggleTheme}
+            title={`Switch to ${nextMode} mode`}
+            aria-label={`Switch to ${nextMode} mode`}
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+          </button>
+        </div>
         <div className="nav-links">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(255,255,255,0.05)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-full)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'var(--chip-bg)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-full)' }}>
             <span className={`badge ${user?.role === 'teacher' ? 'badge-secondary' : 'badge-primary'}`}>
               {user?.role?.toUpperCase()}
             </span>
@@ -48,11 +66,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   return <>{children}</>;
 };
-
-import CourseDetail from './pages/CourseDetail';
-import AssignmentDetail from './pages/AssignmentDetail';
-import EvaluationView from './pages/EvaluationView';
-import APIKeyManagement from './pages/APIKeyManagement';
 
 const AppRoutes = () => {
   return (
@@ -86,11 +99,13 @@ const CourseListWrapper = () => {
 
 const App = () => {
   return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 };
 

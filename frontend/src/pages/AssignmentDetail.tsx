@@ -213,7 +213,7 @@ const AssignmentDetail: React.FC = () => {
         ) : (
           <div className="glass-panel" style={{ padding: '0', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ background: 'rgba(255,255,255,0.05)' }}>
+              <thead style={{ background: 'var(--table-head-bg)' }}>
                 <tr>
                   {user?.role === 'teacher' && <th style={{ padding: '1rem', textAlign: 'left' }}>Student</th>}
                   <th style={{ padding: '1rem', textAlign: 'left' }}>Status</th>
@@ -223,7 +223,7 @@ const AssignmentDetail: React.FC = () => {
               </thead>
               <tbody>
                 {submissions.map(s => (
-                  <tr key={s.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <tr key={s.id} style={{ borderTop: '1px solid var(--table-row-border)' }}>
                     {user?.role === 'teacher' && (
                       <td style={{ padding: '1rem' }}>{s.student_name ? s.student_name : `Student #${s.student_id}`}</td>
                     )}
