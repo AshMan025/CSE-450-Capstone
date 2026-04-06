@@ -7,9 +7,20 @@ import {
   getMySubmission,
   uploadFile,
   submitAssignment,
-  startEvaluation
+  startEvaluation,
+  getAPIKeys,
+  getEvaluationJob,
 } from '../utils/services';
 import type { Submission, Assignment } from '../utils/services';
+
+type APIKeyEntry = {
+  id: number;
+  provider: string;
+  model_name: string;
+  is_valid: string;
+  last_tested_at?: string;
+  error_message?: string;
+};
 import {
   Upload,
   Play,
@@ -24,6 +35,13 @@ const AssignmentDetail: React.FC = () => {
 
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [apiKeys, setApiKeys] = useState<APIKeyEntry[]>([]);
+  const [selectedKeys, setSelectedKeys] = useState<Record<number, number | null>>({});
+  const [globalSelectedKey, setGlobalSelectedKey] = useState<number | null>(null);
+  const [evalResults, setEvalResults] = useState<Record<number, {status: string; error_message?: string; model_used?: string}>>({});
+  const [runningSubmissionIds, setRunningSubmissionIds] = useState<Record<number, boolean>>({});
+  const [isEvaluatingAll, setIsEvaluatingAll] = useState(false);
 
   // Student Upload State
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -41,6 +59,20 @@ const AssignmentDetail: React.FC = () => {
       if (user?.role === 'teacher') {
         const res = await getAssignmentSubmissions(Number(id));
         setSubmissions(res.data);
+        // fetch teacher's saved API keys and initialize selections
+        try {
+          const kres = await getAPIKeys();
+          const allKeys: APIKeyEntry[] = kres.data;
+          const preferredDefault = allKeys.find((k) => k.is_valid === 'valid')?.id;
+          const defaultKeyId = preferredDefault ?? allKeys[0]?.id ?? null;
+          setApiKeys(allKeys);
+          const initial: Record<number, number | null> = {};
+          res.data.forEach((s: Submission) => { initial[s.id] = defaultKeyId });
+          setSelectedKeys(initial);
+          setGlobalSelectedKey(defaultKeyId);
+        } catch (e) {
+          console.error('Failed to load API keys', e);
+        }
       } else {
         const res = await getMySubmission(Number(id));
         setSubmissions(res.data ? [res.data] : []);
@@ -75,22 +107,71 @@ const AssignmentDetail: React.FC = () => {
     }
   };
 
-  const handleRunEvaluation = async (submission: Submission) => {
+  const handleRunEvaluation = async (submission: Submission, overrideKeyId?: number | null) => {
     if (!assignment || !user) return;
+    if (runningSubmissionIds[submission.id]) return;
+    // choose key: override -> per-submission -> global
+    const selected_key = overrideKeyId ?? selectedKeys[submission.id] ?? globalSelectedKey;
+    setRunningSubmissionIds(prev => ({ ...prev, [submission.id]: true }));
+    setEvalResults(prev => ({ ...prev, [submission.id]: { status: 'running' } }));
     try {
-      await startEvaluation({
+      const resp = await startEvaluation({
         submission_id: submission.id,
         assignment_id: assignment.id,
         file_id: submission.file_id,
         marking_strategy: assignment.marking_strategy,
         prompt: assignment.default_prompt,
         teacher_id: user.id,
-        student_id: submission.student_id
+        student_id: submission.student_id,
+        selected_api_key_id: selected_key
       });
-      alert('Evaluation job started!');
-      fetchData();
+      const job = resp.data;
+
+      await new Promise<void>((resolve) => {
+        const poll = async () => {
+          try {
+            const jres = await getEvaluationJob(job.id);
+            const j = jres.data;
+            if (j.status === 'completed') {
+              setEvalResults(prev => ({ ...prev, [submission.id]: { status: 'completed', model_used: j.llm_model_used } }));
+              setRunningSubmissionIds(prev => ({ ...prev, [submission.id]: false }));
+              fetchData();
+              resolve();
+              return;
+            } else if (j.status === 'failed') {
+              setEvalResults(prev => ({ ...prev, [submission.id]: { status: 'failed', error_message: j.error_message } }));
+              setRunningSubmissionIds(prev => ({ ...prev, [submission.id]: false }));
+              fetchData();
+              resolve();
+              return;
+            } else {
+              setTimeout(poll, 2000);
+            }
+          } catch (e) {
+            setEvalResults(prev => ({ ...prev, [submission.id]: { status: 'failed', error_message: 'Failed to poll job' } }));
+            setRunningSubmissionIds(prev => ({ ...prev, [submission.id]: false }));
+            resolve();
+          }
+        };
+        poll();
+      });
     } catch (err) {
       alert('Failed to start evaluation');
+      setEvalResults(prev => ({ ...prev, [submission.id]: { status: 'failed', error_message: 'Failed to start job' } }));
+      setRunningSubmissionIds(prev => ({ ...prev, [submission.id]: false }));
+    }
+  };
+
+  const handleEvaluateAll = async () => {
+    if (isEvaluatingAll) return;
+    setIsEvaluatingAll(true);
+    try {
+      for (const s of submissions) {
+        if (s.status !== 'submitted') continue;
+        await handleRunEvaluation(s, globalSelectedKey);
+      }
+    } finally {
+      setIsEvaluatingAll(false);
     }
   };
 
@@ -147,17 +228,40 @@ const AssignmentDetail: React.FC = () => {
                       <td style={{ padding: '1rem' }}>{s.student_name ? s.student_name : `Student #${s.student_id}`}</td>
                     )}
                     <td style={{ padding: '1rem' }}>
+                      {(() => {
+                        const rowRunning = !!runningSubmissionIds[s.id];
+                        return (
                       <span className={`badge ${s.status === 'submitted' ? 'badge-primary' : s.status === 'evaluated' ? 'badge-success' : 'badge-secondary'}`}>
-                        {s.status}
+                        {rowRunning ? 'evaluating' : s.status}
                       </span>
+                        );
+                      })()}
                     </td>
                     <td style={{ padding: '1rem', opacity: 0.7 }}>{new Date(s.submitted_at).toLocaleString()}</td>
                     <td style={{ padding: '1rem', textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                         {user?.role === 'teacher' && s.status === 'submitted' && (
-                          <button className="btn btn-primary" style={{ padding: '0.2rem 0.5rem' }} onClick={() => handleRunEvaluation(s)}>
-                            <Play size={16} /> Run Evaluation
-                          </button>
+                          <>
+                            <select
+                              value={selectedKeys[s.id] ?? ''}
+                              onChange={(e) => setSelectedKeys(prev => ({ ...prev, [s.id]: e.target.value ? Number(e.target.value) : null }))}
+                              style={{ marginRight: '0.5rem' }}
+                              disabled={!!runningSubmissionIds[s.id] || isEvaluatingAll}
+                            >
+                              <option value="">Select LLM</option>
+                              {apiKeys.map(k => (
+                                <option key={k.id} value={k.id}>{`${k.provider} — ${k.model_name}`}</option>
+                              ))}
+                            </select>
+                            <button
+                              className="btn btn-primary"
+                              style={{ padding: '0.2rem 0.5rem' }}
+                              onClick={() => handleRunEvaluation(s)}
+                              disabled={!!runningSubmissionIds[s.id] || isEvaluatingAll}
+                            >
+                              <Play size={16} /> {!!runningSubmissionIds[s.id] ? 'Evaluating...' : 'Run Evaluation'}
+                            </button>
+                          </>
                         )}
                         <button
                           className="btn btn-secondary"
@@ -177,6 +281,40 @@ const AssignmentDetail: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {user?.role === 'teacher' && apiKeys.length > 0 && (
+          <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <label style={{ opacity: 0.8 }}>Evaluate all with:</label>
+            <select
+              value={globalSelectedKey ?? ''}
+              onChange={e => setGlobalSelectedKey(e.target.value ? Number(e.target.value) : null)}
+              disabled={isEvaluatingAll}
+            >
+              <option value="">Select LLM</option>
+              {apiKeys.map(k => (
+                <option key={k.id} value={k.id}>{`${k.provider} — ${k.model_name}`}</option>
+              ))}
+            </select>
+            <button
+              className="btn btn-primary"
+              onClick={handleEvaluateAll}
+              disabled={!globalSelectedKey || isEvaluatingAll}
+            >
+              {isEvaluatingAll ? 'Evaluating All...' : 'Evaluate All'}
+            </button>
+          </div>
+        )}
+
+        {Object.keys(evalResults).length > 0 && (
+          <div style={{ marginTop: '1rem' }}>
+            <h4>Evaluation Results</h4>
+            <ul>
+              {Object.entries(evalResults).map(([sid, res]) => (
+                <li key={sid}>{`Submission ${sid}: ${res.status}${res.error_message ? ' — ' + res.error_message : ''}${res.model_used ? ' (model: ' + res.model_used + ')' : ''}`}</li>
+              ))}
+            </ul>
           </div>
         )}
       </div>

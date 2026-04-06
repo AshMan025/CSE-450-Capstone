@@ -8,22 +8,45 @@ async def test_openai_key(api_key: str, model_name: str) -> tuple[bool, str, str
     """Test OpenAI API key. Returns (is_valid, status, message)."""
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(
-                "https://api.openai.com/v1/models",
+            # Use a tiny real completion request so "valid" means actually usable
+            # for inference, not just that the key can list metadata endpoints.
+            response = await client.post(
+                "https://api.openai.com/v1/chat/completions",
                 headers={"Authorization": f"Bearer {api_key}"},
+                json={
+                    "model": model_name,
+                    "messages": [{"role": "user", "content": "Reply with OK"}],
+                    "max_tokens": 5,
+                    "temperature": 0
+                },
                 timeout=10.0
             )
             if response.status_code == 200:
-                models = response.json().get("data", [])
-                available = any(m["id"] == model_name for m in models)
-                if available:
-                    return True, "valid", f"✓ API key valid. Model '{model_name}' available."
-                else:
-                    return False, "invalid", f"✗ API key valid but model '{model_name}' not available."
+                return True, "valid", f"✓ API key valid and model '{model_name}' can run inference."
             elif response.status_code == 401:
                 return False, "invalid", "✗ Invalid API key."
             elif response.status_code == 429:
-                return False, "quota_exceeded", "✗ Rate limit or quota exceeded."
+                try:
+                    err = response.json().get("error", {})
+                except Exception:
+                    err = {}
+                code = str(err.get("code", "")).lower()
+                etype = str(err.get("type", "")).lower()
+                message = err.get("message", "") or response.text[:160]
+                if code == "insufficient_quota" or etype == "insufficient_quota":
+                    return False, "quota_exceeded", f"✗ Quota exceeded: {message}"
+                return False, "quota_exceeded", f"✗ Rate limit reached: {message}"
+            elif response.status_code in (400, 403, 404):
+                try:
+                    err = response.json().get("error", {})
+                    message = err.get("message", "") or response.text[:160]
+                    code = str(err.get("code", "")).lower()
+                    etype = str(err.get("type", "")).lower()
+                    if code == "insufficient_quota" or etype == "insufficient_quota":
+                        return False, "quota_exceeded", f"✗ Quota exceeded: {message}"
+                except Exception:
+                    message = response.text[:160]
+                return False, "invalid", f"✗ Model/key not usable: {message}"
             else:
                 return False, "invalid", f"✗ Error: {response.status_code} {response.text[:100]}"
     except httpx.TimeoutException:

@@ -10,6 +10,7 @@ class EvaluationRequest(BaseModel):
     prompt: str
     teacher_id: int
     student_id: int
+    selected_api_key_id: int | None = None
     llm_chain: list[str] = ["gemini-2.5-flash", "gemini-1.5-flash"] # fallback sequence
 
 class EvaluationResponse(BaseModel):
